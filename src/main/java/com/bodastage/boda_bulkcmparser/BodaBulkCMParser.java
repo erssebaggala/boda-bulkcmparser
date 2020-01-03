@@ -18,7 +18,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.logging.Level;
 
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
@@ -52,7 +51,7 @@ public class BodaBulkCMParser {
      * <p>
      * Since 1.3.0
      */
-    final static String VERSION = "2.2.5";
+    final static String VERSION = "2.2.6";
 
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BodaBulkCMParser.class);
@@ -1494,7 +1493,8 @@ public class BodaBulkCMParser {
             //If we dont't want to separate the vsDataMo from the 3GPP mos
             //strip vsData From the MOs Ids ie.e vsDataSomeMO_id becomes SomeMO_id
             if (separateVendorAttributes == false) {
-                parentMO = parentMO.replace("vsData", "vs");
+//                parentMO = parentMO.replace("vsData", "vs");
+                parentMO = parentMO.replace("vsData", "");
             }
 
             while (aIter.hasNext()) {
