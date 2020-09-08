@@ -52,7 +52,7 @@ public class BodaBulkCMParser {
      * <p>
      * Since 1.3.0
      */
-    final static String VERSION = "2.2.7";
+    final static String VERSION = "2.2.8";
 
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BodaBulkCMParser.class);
@@ -278,6 +278,8 @@ public class BodaBulkCMParser {
 
     /**
      * A map of 3GPP attributes to the 3GPP MOs
+     * 
+     * The 3GPP attributes are not kept in the moColumns Map object.
      *
      * @since 1.3.0
      */
@@ -593,7 +595,7 @@ public class BodaBulkCMParser {
 
             if (showVersion == true) {
                 System.out.println(VERSION);
-                System.out.println("Copyright (c) 2019 Bodastage Solutions(https://www.bodastage.com)");
+                System.out.println("Copyright (c) 2020 Bodastage Solutions(https://www.bodastage.com)");
                 System.exit(0);
             }
 
@@ -609,7 +611,7 @@ public class BodaBulkCMParser {
                 footer += "java -jar boda-bulkcmparser.jar -i input_folder -o out_folder\n";
                 footer += "java -jar boda-bulkcmparser.jar -i input_folder -p\n";
                 footer += "java -jar boda-bulkcmparser.jar -i input_folder -p -m\n";
-                footer += "\nCopyright (c) 2019 Bodastage Solutions(https://www.bodastage.com)";
+                footer += "\nCopyright (c) 2020 Bodastage Solutions(https://www.bodastage.com)";
                 formatter.printHelp("java -jar boda-bulkcmparser.jar", header, options, footer);
                 System.exit(0);
             }
@@ -972,22 +974,23 @@ public class BodaBulkCMParser {
             return;
         }
 
-        //E1.5
+        //E1.5 --<xn:attributes>
         if (attrMarker == true && vsDataType == null) {
-
+            //LOGGER.info("attrMarker == true && vsDataType == null qName="+ qName);
             //Tracks hierachy of tags under xn:attributes.
             xnAttrRlStack.push(qName);
 
             Map<String, String> m = new LinkedHashMap<String, String>();
             if (threeGPPAttrStack.containsKey(depth)) {
                 m = threeGPPAttrStack.get(depth);
-
+                //LOGGER.info( "depth:" + depth + " qName:" + qName + "iiii XML Tag Stack:" + xmlTagStack.get(depth-1) + "  m :" + m.toString());
                 //Check if the parameter is already in the stack so that we dont
                 //over write it.
                 if (!m.containsKey(qName)) {
                     m.put(qName, null);
                     threeGPPAttrStack.put(depth, m);
                 }
+                //LOGGER.info("startElementEvent>>threeGPPAttrStack:" + threeGPPAttrStack.toString());
             } else {
                 m.put(qName, null); //Initial value null
                 threeGPPAttrStack.put(depth, m);
@@ -1071,10 +1074,10 @@ public class BodaBulkCMParser {
         //3.2 </xn:attributes>
         if (qName.equals("attributes")) {
             attrMarker = false;
-
             if (parserState == ParserStates.EXTRACTING_PARAMETERS && vsDataType == null) {
                 updateThreeGPPAttrMap();
             }
+            
             return;
         }
 
@@ -1151,7 +1154,7 @@ public class BodaBulkCMParser {
                 vsDataTypeRlStack.pop();
             }
         }
-
+        
         //E3.5
         //Process tags under xn:attributes.
         if (attrMarker == true && vsDataType == null) {
@@ -1287,7 +1290,7 @@ public class BodaBulkCMParser {
 
         //Holds parameter-value map before printing
         Map<String, String> xmlTagValues = new LinkedHashMap<String, String>();
-
+        //LOGGER.info("GOOD PLACE TO START " + " mo:" + mo);
         if (parameterFile != null && !moThreeGPPAttrMap.containsKey(mo)) {
             return;
         }
@@ -1550,18 +1553,18 @@ public class BodaBulkCMParser {
         //Get the parameter names and values of the 3GPP MOs
         //@TODO: Handle parameter file
         String threeGGPMo = vsDataType.replace("vsData", "");
-        if (separateVendorAttributes == false && xmlTagStack.contains(threeGGPMo)) {
+        //if (separateVendorAttributes == false && xmlTagStack.contains(threeGGPMo)) {
+        if (separateVendorAttributes == false && moThreeGPPAttrMap.containsKey(threeGGPMo)) {
             Stack _3gppAttr = new Stack();
 
             if (!moThreeGPPAttrMap.isEmpty() && moThreeGPPAttrMap.containsKey(threeGGPMo))
                 _3gppAttr = moThreeGPPAttrMap.get(threeGGPMo);
-
             for (int idx = 0; idx < _3gppAttr.size(); idx++) {
                 String pName = _3gppAttr.get(idx).toString();
                 String pValue = "";
 
-                //Skip _id fileds
-                if (pName.endsWith("_id")) continue;
+                //Skip _id  and bulkCmConfigDataFile_schemaLocationfileds
+                if (pName.endsWith("_id") || pName.equals("bulkCmConfigDataFile_schemaLocation")) continue;
 
                 if (threeGPPAttrValues.containsKey(pName)) pValue = threeGPPAttrValues.get(pName);
 
@@ -1569,7 +1572,6 @@ public class BodaBulkCMParser {
                 paramValues = paramValues + "," + pValue;
             }
         }
-
         String csvFileName = vsDataType;
 
         //Remove vsData if we don't want to separate the 3GPP and vendor attributes
@@ -1610,7 +1612,6 @@ public class BodaBulkCMParser {
     private void updateThreeGPPAttrMap() {
         if (xmlTagStack == null || xmlTagStack.isEmpty()) return;
 
-
         String mo = xmlTagStack.peek().toString();
 
         //Skip 3GPP MO if it is not in the parameter file
@@ -1626,13 +1627,11 @@ public class BodaBulkCMParser {
             moThreeGPPAttrMap.put(mo, new Stack());
         }
 
-
         //The attributes stack can be empty if the MO has no 3GPP attributes
         if (threeGPPAttrStack.isEmpty() || threeGPPAttrStack.get(depth) == null) {
             return;
         }
         tgppAttrs = (LinkedHashMap<String, String>) threeGPPAttrStack.get(depth);
-
 
         attrs = moThreeGPPAttrMap.get(mo);
 
@@ -1812,7 +1811,7 @@ public class BodaBulkCMParser {
      * @since 1.0.0
      */
     public void showHelp() {
-        System.out.println("boda-bulkcmparser " + VERSION + " Copyright (c) 2019 Bodastage(http://www.bodastage.com)");
+        System.out.println("boda-bulkcmparser " + VERSION + " Copyright (c) 2020 Bodastage(http://www.bodastage.com)");
         System.out.println("Parses 3GPP Bulk CM XML to csv.");
         System.out.println("Usage: java -jar boda-bulkcmparser.jar <fileToParse.xml|Directory> <outputDirectory> [parameter.conf]");
     }
