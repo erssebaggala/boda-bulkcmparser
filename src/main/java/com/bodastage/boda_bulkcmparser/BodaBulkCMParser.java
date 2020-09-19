@@ -1507,7 +1507,21 @@ public class BodaBulkCMParser {
             }
         }
 
-        //Make copy of the columns first
+        
+        //3GPP MO. It has been moved her for use in combining attr that exist in 
+        //the vendor attr and 3GPP attr list
+        String threeGGPMo = vsDataType.replace("vsData", "");
+        
+        //Check for if 3GPP ofr MO exists
+        Boolean tgppExists = moThreeGPPAttrMap.containsKey(threeGGPMo);
+        
+        //Get the 3GPP attributes
+        Stack _3gppAttr = new Stack();
+        if (!moThreeGPPAttrMap.isEmpty() && moThreeGPPAttrMap.containsKey(threeGGPMo)){
+            _3gppAttr = moThreeGPPAttrMap.get(threeGGPMo);
+        }
+        
+        //Make copy of the columns first i.e the vendor attributes
         Stack columns = new Stack();
 
         columns = moColumns.get(vsDataType);
@@ -1544,6 +1558,11 @@ public class BodaBulkCMParser {
                 pValue = toCSVFormat(vsDataTypeStack.get(pName));
             }
 
+            //Handle parameters that exist in 3GGP attr list too i.e in moThreeGPPAttrMap
+            if(pValue.length() == 0 && _3gppAttr.contains(pName)){
+                if (threeGPPAttrValues.containsKey(pName)) pValue = threeGPPAttrValues.get(pName);
+            }
+            
             paramNames = paramNames + "," + pName;
             paramValues = paramValues + "," + pValue;
         }
@@ -1552,17 +1571,25 @@ public class BodaBulkCMParser {
         //strip vsData From the MOs, we must print the 3GPP mos here .
         //Get the parameter names and values of the 3GPP MOs
         //@TODO: Handle parameter file
-        String threeGGPMo = vsDataType.replace("vsData", "");
+        
+        //String threeGGPMo = vsDataType.replace("vsData", "");
+        
+        //Replace to fix bug
         //if (separateVendorAttributes == false && xmlTagStack.contains(threeGGPMo)) {
         if (separateVendorAttributes == false && moThreeGPPAttrMap.containsKey(threeGGPMo)) {
-            Stack _3gppAttr = new Stack();
-
-            if (!moThreeGPPAttrMap.isEmpty() && moThreeGPPAttrMap.containsKey(threeGGPMo))
-                _3gppAttr = moThreeGPPAttrMap.get(threeGGPMo);
+            
+            //Moved to the top just before collecting the vendor attribute values
+            //Stack _3gppAttr = new Stack();
+            //if (!moThreeGPPAttrMap.isEmpty() && moThreeGPPAttrMap.containsKey(threeGGPMo)){
+            //    _3gppAttr = moThreeGPPAttrMap.get(threeGGPMo);
+            //}
             for (int idx = 0; idx < _3gppAttr.size(); idx++) {
                 String pName = _3gppAttr.get(idx).toString();
                 String pValue = "";
 
+                //Skip parameters that already exist in the vendor attr list 
+                if(columns.contains(pName)) continue;
+                
                 //Skip _id  and bulkCmConfigDataFile_schemaLocationfileds
                 if (pName.endsWith("_id") || pName.equals("bulkCmConfigDataFile_schemaLocation")) continue;
 
